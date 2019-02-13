@@ -2,6 +2,7 @@ import os
 import random
 
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
@@ -11,10 +12,10 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
+from IPython import display
 
-from .utils import *
-from .Discriminator import Discriminator
-from  .Generator import Generator
+from src.Discriminator import Discriminator
+from src.Generator import Generator
 
 
 class GANTrainer:
@@ -65,7 +66,9 @@ class GANTrainer:
 
         # training loop
 
-        last_imgs = None
+        with torch.no_grad():
+            fake = self.modelG(fixed_noise).detach().cpu()
+        last_imgs = vutils.make_grid(fake, padding=2, normalize=True)
         G_losses = []
         D_losses = []
 
@@ -90,10 +93,61 @@ class GANTrainer:
                 output = self.modelD(fake.detach()).view(-1)
                 errD_fake = criterion(output, label)
                 errD_fake.backward()
-                D_G_noise = output.mean().item()
+                # D_G_noise1 = output.mean().item()
                 errD = errD_real + errD_fake
                 optimizerD.step()
 
                 # (2) Update G network: maximize log(D(G(noise)))
+                self.modelG.zero_grad()
+                label.fill_(real_label)
+
+                output = self.modelD(fake).view(-1)
+                errG = criterion(output, label)
+                errG.backward()
+                D_G_noise2 = output.mean().item()
+                optimizerG.step()
+
+                G_losses.append(errG.item())
+                D_losses.append(errD.item())
+
+                if i == len(dataloader)-1:
+                    print(f"epoch: {epoch}/{n_epoch}; lossD: {errD.item()}; lossG: {errG.item()} \n "
+                          f"Scores: D(real): {D_data}; D(G(noise)): {D_G_noise2}")
+
+                    if epoch % 10 == 0:
+                        with torch.no_grad():
+                            fake = self.modelG(fixed_noise).detach().cpu()
+                        last_imgs = vutils.make_grid(fake, padding=2, normalize=True)
+
+                    visualize_training(G_losses, D_losses, last_imgs)
 
 
+def gan_weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+
+def visualize_training(lossG, lossD, imgs):
+    plt.clf()
+    plt.subplot(211)
+    plt.plot(lossG, label="G")
+    plt.plot(lossD, label="D")
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.legend()
+    plt.subplot(212)
+    plt.axis("off")
+    plt.title('current generations')
+    plt.imshow(np.transpose(imgs,(1,2,0)))
+
+    display.clear_output(wait=True)
+    display.display(plt.gcf())
+
+
+# if __name__ == '__main__':
+#     T = GANTrainer('../data/', 64, 3)
+#     T.train(5, 0.0002, 0.5)

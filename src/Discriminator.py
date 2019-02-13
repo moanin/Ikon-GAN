@@ -27,5 +27,13 @@ class Discriminator(nn.Module):
             modules.append(nn.LeakyReLU(0.2, inplace=True))
 
         modules.append(nn.Conv2d(self.n_filter * 2**base, 1, 4, 1, 0, bias=False))
+        modules.append(nn.Sigmoid())
 
         return modules
+
+
+if __name__ == "__main__":
+    n = 128
+    m = Discriminator(n, 1)
+    from torchsummary import summary
+    summary(m, (3,128,128))
