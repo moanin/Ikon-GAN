@@ -13,10 +13,10 @@ class Generator(nn.Module):
         self.n_filter = n_filter
         self.ngpu = ngpu
         modules = self.get_modules()
-        self.main = nn.Sequential(*modules)
+        self.model = nn.Sequential(*modules)
 
     def forward(self, input):
-        return self.main(input)
+        return self.model(input)
 
     def get_modules(self):
         base = int(math.log2(self.img_size)) - 3
@@ -34,4 +34,3 @@ class Generator(nn.Module):
         modules.append(nn.Tanh())
 
         return modules
-
