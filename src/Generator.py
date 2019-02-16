@@ -4,14 +4,13 @@ import math
 
 
 class Generator(nn.Module):
-    def __init__(self, img_size, noise_size, ngpu, nc=3, n_filter=64):
+    def __init__(self, img_size, noise_size, nc=3, n_filter=64):
         super(Generator, self).__init__()
         assert math.log2(img_size).is_integer()
         self.img_size = img_size
         self.noise_size = noise_size
         self.nc = nc
         self.n_filter = n_filter
-        self.ngpu = ngpu
         modules = self.get_modules()
         self.model = nn.Sequential(*modules)
 

@@ -1,3 +1,4 @@
+import json
 import os
 import random
 
@@ -20,35 +21,63 @@ from src.Generator import Generator
 
 class GANTrainer:
 
-    def __init__(self, data_dir, img_size, nc,
+    def __init__(self, data_dir,
+                 img_size=64,
+                 nc=3,
                  n_filter_G=64,
                  n_filter_D=64,
                  noise_size=100,
-                 ngpu=1):
+                 load_path=None,
+                 ngpu=0):
 
+        self.data_dir = data_dir
+        self.img_size = img_size
+        self.nc = nc
+        self.n_filter_G = n_filter_G
+        self.n_filter_D = n_filter_D
         self.noise_size = noise_size
+        self.load_path = load_path
+
+        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
+        print(f'using: {self.device}')
+
+        if load_path:
+            self.load_models()
+        else:
+            self.modelG = Generator(img_size, noise_size, nc, n_filter_G).to(self.device)
+            self.modelD = Discriminator(img_size, nc, n_filter_D).to(self.device)
+            self.modelG.apply(gan_weights_init)
+            self.modelD.apply(gan_weights_init)
+
         self.dataset = dset.ImageFolder(root=data_dir,
                                         transform=transforms.Compose([
-                                            transforms.Resize(img_size),
-                                            transforms.CenterCrop(img_size),
+                                            transforms.Resize(self.img_size),
+                                            transforms.CenterCrop(self.img_size),
                                             transforms.ToTensor(),
                                             transforms.Normalize((0.5, 0.5, 0.5),
                                                                  (0.5, 0.5, 0.5)),
-                                            ]))
-
-        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
-
-        self.modelG = Generator(img_size, noise_size, ngpu, nc, n_filter_G).to(self.device)
-        self.modelD = Discriminator(img_size, ngpu, nc, n_filter_D).to(self.device)
+                                        ]))
 
         if (self.device.type == 'cuda') and (ngpu > 1):
             self.modelG = nn.DataParallel(self.modelG, list(range(ngpu)))
             self.modelD = nn.DataParallel(self.modelD, list(range(ngpu)))
 
-        self.modelG.apply(gan_weights_init)
-        self.modelD.apply(gan_weights_init)
+    def load_models(self):
 
-    def train(self, n_epoch, lr, beta1, batch_size=128, workers=2):
+        with open(os.path.join(self.load_path, 'params.json'), 'r') as f:
+            params = json.load(f)
+            f.close()
+
+        self.img_size = params['img_size']
+        self.nc = params['nc']
+        self.n_filter_G = params['n_filter_G']
+        self.n_filter_D = params['n_filter_D']
+        self.noise_size = params['noise_size']
+
+        self.modelG = torch.load(os.path.join(self.load_path, 'generator.pth')).to(self.device)
+        self.modelD = torch.load(os.path.join(self.load_path, 'discriminator.pth')).to(self.device)
+
+    def train(self, n_epoch, lr, beta1, batch_size=128, workers=2, output_path=None):
 
         dataloader = torch.utils.data.DataLoader(self.dataset,
                                                  batch_size=batch_size,
@@ -110,16 +139,34 @@ class GANTrainer:
                 G_losses.append(errG.item())
                 D_losses.append(errD.item())
 
-                if i == len(dataloader)-1:
-                    print(f"epoch: {epoch}/{n_epoch}; lossD: {errD.item()}; lossG: {errG.item()} \n "
-                          f"Scores: D(real): {D_data}; D(G(noise)): {D_G_noise2}")
+                if i == len(dataloader) - 1:
+                    print(f"epoch: {epoch}/{n_epoch}; lossD: {round(errD.item(), 3)}; lossG: {round(errG.item(), 3)} \n"
+                          f"Scores: D(real): {round(D_data, 3)}; D(G(noise)): {round(D_G_noise2, 3)}")
 
-                    if epoch % 10 == 0:
-                        with torch.no_grad():
-                            fake = self.modelG(fixed_noise).detach().cpu()
-                        last_imgs = vutils.make_grid(fake, padding=2, normalize=True)
+                    if output_path:
+                        if epoch % 10 == 0:
+                            with torch.no_grad():
+                                fake = self.modelG(fixed_noise).detach().cpu()
+                            last_imgs = vutils.make_grid(fake, padding=2, normalize=True).numpy()
+                            last_imgs = np.moveaxis(last_imgs, 0, -1)
+                            last_imgs = (last_imgs - last_imgs.min()) * (1 / (last_imgs.max() - last_imgs.min()) * 1)
+                            plt.imsave(os.path.join(output_path, f'{epoch}_{i}'), last_imgs)
 
-                    visualize_training(G_losses, D_losses, last_imgs)
+                    # visualize_training(G_losses, D_losses, last_imgs)
+        print('Finished training')
+
+    def save_models(self, models_dir):
+        params = {'img_size': self.img_size,
+                  'nc': self.nc,
+                  'n_filter_G': self.n_filter_G,
+                  'n_filter_D': self.n_filter_D,
+                  'noise_size': self.noise_size}
+        with open(os.path.join(models_dir, 'model_params.json'), 'w') as f:
+            json.dump(params, f)
+            f.close()
+        torch.save(self.modelG, os.path.join(models_dir, 'generator.pth'))
+        torch.save(self.modelD, os.path.join(models_dir, 'discriminator.pth'))
+        print(f'saved  models in : {models_dir}')
 
 
 def gan_weights_init(m):
@@ -133,21 +180,23 @@ def gan_weights_init(m):
 
 def visualize_training(lossG, lossD, imgs):
     plt.clf()
-    plt.subplot(211)
+    # plt.subplot(211)
     plt.plot(lossG, label="G")
     plt.plot(lossD, label="D")
-    plt.xlabel('epochs')
+    plt.xlabel('batches')
     plt.ylabel('loss')
     plt.legend()
-    plt.subplot(212)
-    plt.axis("off")
-    plt.title('current generations')
-    plt.imshow(np.transpose(imgs,(1,2,0)))
+    # plt.subplot(212)
+    # plt.axis("off")
+    # plt.title('current generations')
+    # plt.imshow(np.transpose(imgs,(1,2,0)))
 
-    display.clear_output(wait=True)
-    display.display(plt.gcf())
+    # display.clear_output(wait=True)
+    # display.display(plt.gcf())
+
+    plt.show()
 
 
-# if __name__ == '__main__':
-#     T = GANTrainer('../data/', 64, 3)
-#     T.train(5, 0.0002, 0.5)
+if __name__ == '__main__':
+    T = GANTrainer('../data/', 64, 3)
+    T.train(500, 0.0002, 0.5)

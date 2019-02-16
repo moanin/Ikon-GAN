@@ -4,12 +4,11 @@ import math
 
 
 class Discriminator(nn.Module):
-    def __init__(self, img_size, ngpu, nc=3, n_filter=64):
+    def __init__(self, img_size, nc=3, n_filter=64):
         super(Discriminator, self).__init__()
         self.img_size = img_size
         self.nc = nc
         self.n_filter = n_filter
-        self.ngpu = ngpu
         modules = self.get_modules()
         self.model = nn.Sequential(*modules)
 
