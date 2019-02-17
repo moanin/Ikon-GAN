@@ -20,13 +20,15 @@ def train(data_dir,
           batch_size=128,
           workers=2,
           output_path=None,
-          save_path=None):
+          save_path=None,
+          soft_labels=False):
 
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
     T = GANTrainer(data_dir, img_size, nc, n_filter_G,
                    n_filter_D, noise_size, load_path, ngpu)
-    T.train(n_epoch, lr, beta1, batch_size, workers, output_path)
+    T.train(n_epoch, lr, beta1, batch_size, workers,
+            output_path, soft_labels)
 
     if save_path:
         if not os.path.isdir(save_path):

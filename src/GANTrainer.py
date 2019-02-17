@@ -82,7 +82,8 @@ class GANTrainer:
         self.modelG = torch.load(os.path.join(self.load_path, 'generator.pth')).to(self.device)
         self.modelD = torch.load(os.path.join(self.load_path, 'discriminator.pth')).to(self.device)
 
-    def train(self, n_epoch, lr, beta1, batch_size=128, workers=2, output_path=None):
+    def train(self, n_epoch, lr, beta1, batch_size=128, workers=2,
+              output_path=None, soft_labels=False):
 
         dataloader = torch.utils.data.DataLoader(self.dataset,
                                                  batch_size=batch_size,
@@ -114,6 +115,8 @@ class GANTrainer:
                 real = batch[0].to(self.device)
                 b_size = real.size(0)
                 label = torch.full((b_size,), real_label, device=self.device)
+                if soft_labels:
+                    label -= -0.3 * torch.rand((b_size,), device=self.device) + 0.3
 
                 output = self.modelD(real).view(-1)
                 errD_real = criterion(output, label)
@@ -124,6 +127,8 @@ class GANTrainer:
 
                 fake = self.modelG(noise)
                 label.fill_(fake_label)
+                if soft_labels:
+                    label += -0.3 * torch.rand((b_size,), device=self.device) + 0.3
                 output = self.modelD(fake.detach()).view(-1)
                 errD_fake = criterion(output, label)
                 errD_fake.backward()
@@ -134,6 +139,8 @@ class GANTrainer:
                 # (2) Update G network: maximize log(D(G(noise)))
                 self.modelG.zero_grad()
                 label.fill_(real_label)
+                if soft_labels:
+                    label -= -0.3 * torch.rand((b_size,), device=self.device) + 0.3
 
                 output = self.modelD(fake).view(-1)
                 errG = criterion(output, label)
