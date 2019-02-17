@@ -21,13 +21,13 @@ class Generator(nn.Module):
         base = int(math.log2(self.img_size)) - 3
         modules = [nn.ConvTranspose2d( self.noise_size, self.n_filter * 2**base, 4, 1, 0, bias=False),
                    nn.BatchNorm2d(self.n_filter * 2**base),
-                   nn.ReLU(True)]
+                   nn.LeakyReLU(0.2, inplace=True)]
         for i in range(1, base + 1):
             base_new = base - i
             modules.append(nn.ConvTranspose2d( self.n_filter * 2**(base_new+1),
                                                self.n_filter * 2**base_new, 4, 2, 1, bias=False))
             modules.append(nn.BatchNorm2d(self.n_filter * 2**base_new))
-            modules.append(nn.ReLU(True))
+            modules.append(nn.LeakyReLU(0.2, inplace=True))
 
         modules.append(nn.ConvTranspose2d( self.n_filter, self.nc, 4, 2, 1, bias=False))
         modules.append(nn.Tanh())

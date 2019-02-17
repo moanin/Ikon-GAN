@@ -145,7 +145,7 @@ class GANTrainer:
                 D_losses.append(errD.item())
 
                 if i == len(dataloader) - 1:
-                    print(f"epoch: {epoch}/{n_epoch}; lossD: {round(errD.item(), 3)}; lossG: {round(errG.item(), 3)} \n"
+                    print(f"epoch: {epoch}/{n_epoch}; lossD: {round(errD.item(), 3)}; lossG: {round(errG.item(), 3)} "
                           f"Scores: D(real): {round(D_data, 3)}; D(G(noise)): {round(D_G_noise2, 3)}")
 
                     if output_path:
