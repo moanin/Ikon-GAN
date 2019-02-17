@@ -18,6 +18,8 @@ from IPython import display
 from src.Discriminator import Discriminator
 from src.Generator import Generator
 
+MANUAL_SEED = 999
+
 
 class GANTrainer:
 
@@ -29,6 +31,9 @@ class GANTrainer:
                  noise_size=100,
                  load_path=None,
                  ngpu=0):
+
+        random.seed(MANUAL_SEED)
+        torch.manual_seed(MANUAL_SEED)
 
         self.data_dir = data_dir
         self.img_size = img_size
