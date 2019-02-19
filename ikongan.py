@@ -6,7 +6,7 @@ import fire
 from src.GANTrainer import GANTrainer
 
 
-def train(data_dir,
+def train(data_dir=None,
           img_size=64,
           nc=3,
           n_filter_G=64,
@@ -36,8 +36,10 @@ def train(data_dir,
         T.save_models(save_path)
 
 
-def generate():
-    print('TODO: implement')
+def generate(model_dir, n_img, output_dir):
+
+    T = GANTrainer(load_path=model_dir)
+    T.generate(n_img, output_dir)
 
 
 if __name__ == "__main__":

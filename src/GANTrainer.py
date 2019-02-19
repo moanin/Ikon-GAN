@@ -23,7 +23,7 @@ MANUAL_SEED = 999
 
 class GANTrainer:
 
-    def __init__(self, data_dir,
+    def __init__(self, data_dir = None,
                  img_size=64,
                  nc=3,
                  n_filter_G=64,
@@ -54,22 +54,13 @@ class GANTrainer:
             self.modelG.apply(gan_weights_init)
             self.modelD.apply(gan_weights_init)
 
-        self.dataset = dset.ImageFolder(root=data_dir,
-                                        transform=transforms.Compose([
-                                            transforms.Resize(self.img_size),
-                                            transforms.CenterCrop(self.img_size),
-                                            transforms.ToTensor(),
-                                            transforms.Normalize((0.5, 0.5, 0.5),
-                                                                 (0.5, 0.5, 0.5)),
-                                        ]))
-
         if (self.device.type == 'cuda') and (ngpu > 1):
             self.modelG = nn.DataParallel(self.modelG, list(range(ngpu)))
             self.modelD = nn.DataParallel(self.modelD, list(range(ngpu)))
 
     def load_models(self):
 
-        with open(os.path.join(self.load_path, 'params.json'), 'r') as f:
+        with open(os.path.join(self.load_path, 'model_params.json'), 'r') as f:
             params = json.load(f)
             f.close()
 
@@ -85,6 +76,15 @@ class GANTrainer:
     def train(self, n_epoch, lr, beta1, batch_size=128, workers=2,
               output_path=None, soft_labels=False):
 
+        self.dataset = dset.ImageFolder(root=self.data_dir,
+                                        transform=transforms.Compose([
+                                            transforms.Resize(self.img_size),
+                                            transforms.CenterCrop(self.img_size),
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.5, 0.5, 0.5),
+                                                                 (0.5, 0.5, 0.5)),
+                                        ]))
+
         dataloader = torch.utils.data.DataLoader(self.dataset,
                                                  batch_size=batch_size,
                                                  num_workers=workers)
@@ -97,6 +97,7 @@ class GANTrainer:
         real_label = 1
 
         optimizerD = optim.Adam(self.modelD.parameters(), lr=lr, betas=(beta1, 0.999))
+        # optimizerD = optim.SGD(self.modelD.parameters(), lr=lr)
         optimizerG = optim.Adam(self.modelG.parameters(), lr=lr, betas=(beta1, 0.999))
 
         # training loop
@@ -179,6 +180,16 @@ class GANTrainer:
         torch.save(self.modelG, os.path.join(models_dir, 'generator.pth'))
         torch.save(self.modelD, os.path.join(models_dir, 'discriminator.pth'))
         print(f'saved  models in : {models_dir}')
+
+    def generate(self, n_img, output_dir):
+        self.modelG.eval()
+        for i in range(n_img):
+            noise = torch.randn(1, self.noise_size, 1, 1, device=self.device)
+            with torch.no_grad():
+                img = self.modelG(noise)[0].numpy()
+            img = np.moveaxis(img, 0, -1)
+            img = (img - img.min()) * (1 / (img.max() - img.min()) * 1)
+            plt.imsave(os.path.join(output_dir, '{:03}'.format(i)), img)
 
 
 def gan_weights_init(m):
