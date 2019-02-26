@@ -4,6 +4,7 @@ import random
 import fire
 
 from src.GANTrainer import GANTrainer
+from src.utils import animate as an
 
 
 def train(data_dir=None,
@@ -37,9 +38,12 @@ def train(data_dir=None,
 
 
 def generate(model_dir, n_img, output_dir):
-
     T = GANTrainer(load_path=model_dir)
     T.generate(n_img, output_dir)
+
+
+def animate(imgs_dir, output_path):
+    an(imgs_dir, output_path)
 
 
 if __name__ == "__main__":

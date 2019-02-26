@@ -5,6 +5,12 @@ import math
 
 class Discriminator(nn.Module):
     def __init__(self, img_size, nc=3, n_filter=64):
+        '''
+        Discriminator part of GAN; basically CNN real/generated classificator
+        :param img_size: size of input images
+        :param nc: number of input channels
+        :param n_filter: number of filters in first layer
+        '''
         super(Discriminator, self).__init__()
         self.img_size = img_size
         self.nc = nc
@@ -29,10 +35,3 @@ class Discriminator(nn.Module):
         modules.append(nn.Sigmoid())
 
         return modules
-
-
-if __name__ == "__main__":
-    n = 128
-    m = Discriminator(n, 1)
-    from torchsummary import summary
-    summary(m, (3,128,128))

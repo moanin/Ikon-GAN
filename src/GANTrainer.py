@@ -13,17 +13,17 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
-from IPython import display
 
 from src.Discriminator import Discriminator
 from src.Generator import Generator
+from src.utils import gan_weights_init
 
 MANUAL_SEED = 999
 
 
 class GANTrainer:
 
-    def __init__(self, data_dir = None,
+    def __init__(self, data_dir=None,
                  img_size=64,
                  nc=3,
                  n_filter_G=64,
@@ -31,6 +31,19 @@ class GANTrainer:
                  noise_size=100,
                  load_path=None,
                  ngpu=0):
+
+        '''
+        Class to manage all the processes regarding training and testing GANs. It initializes with new networks
+        with given parameters or loads previously trained models from given loading path
+        :param data_dir: directory with training data; structure data_dir/dataset_folder/*.jpg
+        :param img_size: net param, size of generated image
+        :param nc: net param, number of channels in inputs (and outputs for that mater)
+        :param n_filter_G: net param, number of filters ini Generator
+        :param n_filter_D: net param, number of filters ini Discriminator
+        :param noise_size: net param, len of input noise vector for Generator
+        :param load_path: path to previously saved experiment
+        :param ngpu: number of gpu to use; cpu is used if 0
+        '''
 
         random.seed(MANUAL_SEED)
         torch.manual_seed(MANUAL_SEED)
@@ -190,34 +203,6 @@ class GANTrainer:
             img = np.moveaxis(img, 0, -1)
             img = (img - img.min()) * (1 / (img.max() - img.min()) * 1)
             plt.imsave(os.path.join(output_dir, '{:03}'.format(i)), img)
-
-
-def gan_weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
-
-
-def visualize_training(lossG, lossD, imgs):
-    plt.clf()
-    # plt.subplot(211)
-    plt.plot(lossG, label="G")
-    plt.plot(lossD, label="D")
-    plt.xlabel('batches')
-    plt.ylabel('loss')
-    plt.legend()
-    # plt.subplot(212)
-    # plt.axis("off")
-    # plt.title('current generations')
-    # plt.imshow(np.transpose(imgs,(1,2,0)))
-
-    # display.clear_output(wait=True)
-    # display.display(plt.gcf())
-
-    plt.show()
 
 
 if __name__ == '__main__':
