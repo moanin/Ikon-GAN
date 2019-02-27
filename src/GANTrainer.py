@@ -204,7 +204,3 @@ class GANTrainer:
             img = (img - img.min()) * (1 / (img.max() - img.min()) * 1)
             plt.imsave(os.path.join(output_dir, '{:03}'.format(i)), img)
 
-
-if __name__ == '__main__':
-    T = GANTrainer('../data/', 64, 3)
-    T.train(500, 0.0002, 0.5)
