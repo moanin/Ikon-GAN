@@ -13,7 +13,7 @@ for GAN experiments. In a current state project allows to:
 Note: I heavily based development on GAN training tips from
 [GAN-Hacks](https://github.com/jaingaurav3/GAN-Hacks)
 
-![training_gif](imgs/training.gif)
+![training_gif](imgs/learning.gif)
 
 ## Requirements
 
